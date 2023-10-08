@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	hdl := &web.UserHandler{}
+	hdl := web.NewUserHandler()
 	server := gin.Default()
 	// resolve cors
 	server.Use(cors.New(cors.Config{

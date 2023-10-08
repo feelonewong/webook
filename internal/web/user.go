@@ -1,13 +1,28 @@
 package web
 
 import (
+	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
 
+const (
+	emailRegexPattern    = `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
+	passwordRegexPattern = `^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$`
+	// 密码规则： 至少8位、至少包含一个数字和字母
+)
+
 type UserHandler struct {
+	emailRegexExp    *regexp.Regexp
+	passwordRegexExp *regexp.Regexp
 }
 
+func NewUserHandler() *UserHandler {
+	return &UserHandler{
+		emailRegexExp:    regexp.MustCompile(emailRegexPattern, regexp.None),
+		passwordRegexExp: regexp.MustCompile(passwordRegexPattern, regexp.None),
+	}
+}
 func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
 	ug := server.Group("/users")
 	ug.POST("/signup", h.SignUp)
@@ -27,8 +42,44 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 	if err := ctx.Bind(&req); err != nil {
 		return
 	}
+	// 规则校验
+	isEmail, err := h.emailRegexExp.MatchString(req.Email)
+	if err != nil {
+		ctx.JSON(http.StatusOK, gin.H{
+			"message": "系统错误",
+			"code":    200,
+		})
+		return
+	}
+	if !isEmail {
+		ctx.JSON(http.StatusOK, gin.H{
+			"code":    200,
+			"message": "邮箱格式不正确",
+		})
+		return
+	}
+	isPassword, err := h.passwordRegexExp.MatchString(req.Password)
+	if err != nil {
+		ctx.JSON(http.StatusOK, gin.H{
+			"message": "系统错误",
+		})
+		return
+	}
+
+	if !isPassword {
+		ctx.JSON(http.StatusOK, gin.H{
+			"message": "密码格式不正确:至少八位，包含一个数组和一个字母",
+		})
+		return
+	}
+	if req.Password != req.ConfirmPassword {
+		ctx.JSON(http.StatusOK, gin.H{
+			"message": "密码输入不一致",
+		})
+		return
+	}
 	ctx.JSON(http.StatusOK, gin.H{
-		"message": "SignUp",
+		"message": "SignUp登录校验成功",
 	})
 }
 func (h *UserHandler) Login(ctx *gin.Context) {
