@@ -4,6 +4,8 @@ import (
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"webook/internal/domain"
+	"webook/internal/service"
 )
 
 const (
@@ -15,12 +17,14 @@ const (
 type UserHandler struct {
 	emailRegexExp    *regexp.Regexp
 	passwordRegexExp *regexp.Regexp
+	svc              *service.UserService
 }
 
-func NewUserHandler() *UserHandler {
+func NewUserHandler(svc *service.UserService) *UserHandler {
 	return &UserHandler{
 		emailRegexExp:    regexp.MustCompile(emailRegexPattern, regexp.None),
 		passwordRegexExp: regexp.MustCompile(passwordRegexPattern, regexp.None),
+		svc:              svc,
 	}
 }
 func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
@@ -77,6 +81,17 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 			"message": "密码输入不一致",
 		})
 		return
+	}
+
+	// service方法调用, 这里不会有ConfirmPassword 前端校验即可
+	err = h.svc.Signup(ctx, domain.User{
+		Email:    req.Email,
+		Password: req.Password,
+	})
+	if err != nil {
+		ctx.JSON(http.StatusOK, gin.H{
+			"message": "系统错误!",
+		})
 	}
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "SignUp登录校验成功",
