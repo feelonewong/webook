@@ -31,7 +31,8 @@ func initDB() *gorm.DB {
 	if err != nil {
 		panic(err)
 	}
-	err = dao.InitTables(db)
+	user := dao.User{}
+	err = dao.InitTables(db, &user)
 	if err != nil {
 		panic(err)
 	}

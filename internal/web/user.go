@@ -65,7 +65,7 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 	isPassword, err := h.passwordRegexExp.MatchString(req.Password)
 	if err != nil {
 		ctx.JSON(http.StatusOK, gin.H{
-			"message": "系统错误",
+			"message": "密码-系统错误",
 		})
 		return
 	}
@@ -90,8 +90,9 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 	})
 	if err != nil {
 		ctx.JSON(http.StatusOK, gin.H{
-			"message": "系统错误!",
+			"message": err,
 		})
+		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "SignUp登录校验成功",
