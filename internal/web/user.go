@@ -88,15 +88,21 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 		Email:    req.Email,
 		Password: req.Password,
 	})
-	if err != nil {
+	switch err {
+	case nil:
 		ctx.JSON(http.StatusOK, gin.H{
-			"message": err,
+			"message": "SignUp登录校验成功",
 		})
-		return
+	case service.ErrDuplicateEmail:
+		ctx.JSON(http.StatusOK, gin.H{
+			"message": "邮箱冲突，请更换",
+		})
+	default:
+		ctx.JSON(http.StatusOK, gin.H{
+			"message": "系统错误",
+		})
 	}
-	ctx.JSON(http.StatusOK, gin.H{
-		"message": "SignUp登录校验成功",
-	})
+
 }
 func (h *UserHandler) Login(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{
