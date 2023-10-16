@@ -2,6 +2,7 @@ package web
 
 import (
 	regexp "github.com/dlclark/regexp2"
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"webook/internal/domain"
@@ -91,6 +92,7 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 	switch err {
 	case nil:
 		ctx.JSON(http.StatusOK, gin.H{
+			"code":    "200",
 			"message": "SignUp登录校验成功",
 		})
 	case service.ErrDuplicateEmail:
@@ -105,9 +107,45 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 
 }
 func (h *UserHandler) Login(ctx *gin.Context) {
-	ctx.JSON(http.StatusOK, gin.H{
-		"message": "Login",
-	})
+	type loginReq struct {
+		Email    string
+		Password string
+	}
+
+	var req loginReq
+	if err := ctx.Bind(&req); err != nil {
+		return
+	}
+	// 调用service的业务逻辑
+	u, err := h.svc.Login(ctx, req.Email, req.Password)
+	switch err {
+	case nil:
+		sess := sessions.Default(ctx)
+		sess.Set("userId", u.Id)
+		sess.Options(sessions.Options{
+			// 过期时间15分钟
+			MaxAge: 900,
+		})
+		if errorSess := sess.Save(); errorSess != nil {
+			ctx.JSON(http.StatusOK, gin.H{
+				"message": "系统错误-session",
+			})
+			return
+		}
+		ctx.JSON(http.StatusOK, gin.H{
+			"message": "登录成功!",
+		})
+	case service.ErrInvalidUserOrPassword:
+		ctx.JSON(http.StatusOK, gin.H{
+			"message": "邮箱或者密码不正确",
+		})
+
+	default:
+		ctx.JSON(http.StatusOK, gin.H{
+			"message": "系统错误",
+		})
+	}
+
 }
 func (h *UserHandler) Profile(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{
