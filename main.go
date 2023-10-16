@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
-	"github.com/gin-contrib/sessions/cookie"
+	"github.com/gin-contrib/sessions/memstore"
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -55,11 +55,18 @@ func initWebServer() *gin.Engine {
 		MaxAge: 12 * time.Hour,
 	}))
 	// 判断session的中间件
-	login := &middleware.LoginMiddlewareBuilder{}
+	//login := &middleware.LoginMiddlewareBuilder{}
 	// useId存储到cookie中
-	store := cookie.NewStore([]byte("secret"))
+	//store := cookie.NewStore([]byte("secret"))
 	//这里分为2步：1.存储ssid到cookie中，2.全局中间件判断
-	server.Use(sessions.Sessions("ssid", store), login.CheckLogin())
+	//server.Use(sessions.Sessions("ssid", store), login.CheckLogin())
+
+	// 使用mestore替代cookie
+	store := memstore.NewStore([]byte("yLbakqA10vl62ADPax5ScvE69B0Ph43W"),
+		[]byte("bqD05B9Ze6UDkwX2OSk5AA1sFp19KFxO"))
+	server.Use(sessions.Sessions("ssid", store))
+	login := &middleware.LoginMiddlewareBuilder{}
+	server.Use(login.CheckLogin())
 	return server
 }
 func initUser(db *gorm.DB, server *gin.Engine) {
