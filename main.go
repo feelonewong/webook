@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
-	"github.com/gin-contrib/sessions/memstore"
+	"github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -54,21 +54,26 @@ func initWebServer() *gin.Engine {
 		},
 		MaxAge: 12 * time.Hour,
 	}))
-	// 判断session的中间件
-	//login := &middleware.LoginMiddlewareBuilder{}
-	// useId存储到cookie中
-	//store := cookie.NewStore([]byte("secret"))
-	//这里分为2步：1.存储ssid到cookie中，2.全局中间件判断
-	//server.Use(sessions.Sessions("ssid", store), login.CheckLogin())
-
-	// 使用mestore替代cookie
-	store := memstore.NewStore([]byte("yLbakqA10vl62ADPax5ScvE69B0Ph43W"),
-		[]byte("bqD05B9Ze6UDkwX2OSk5AA1sFp19KFxO"))
-	server.Use(sessions.Sessions("ssid", store))
 	login := &middleware.LoginMiddlewareBuilder{}
-	server.Use(login.CheckLogin())
+	store, err := redis.NewStore(16, "tcp", "localhost:6379", "",
+		[]byte("yLbakqA10vl62ADPax5ScvE69B0Ph43W"),
+		[]byte("bqD05B9Ze6UDkwX2OSk5AA1sFp19KFxO"),
+	)
+	if err != nil {
+		panic(err)
+	}
+	if err != nil {
+		panic(err)
+	}
+	server.Use(sessions.Sessions("ssid", store), login.CheckLogin())
 	return server
 }
+
+func redisSaveCookie(server *gin.Engine) {
+	// 基于redis存储cookie
+
+}
+
 func initUser(db *gorm.DB, server *gin.Engine) {
 	ud := dao.NewUserDAO(db)
 	ur := repository.NewUserRepository(ud)
