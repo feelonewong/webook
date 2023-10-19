@@ -4,7 +4,9 @@ import (
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	jwt "github.com/golang-jwt/jwt/v5"
 	"net/http"
+	"time"
 	"webook/internal/domain"
 	"webook/internal/service"
 )
@@ -31,7 +33,7 @@ func NewUserHandler(svc *service.UserService) *UserHandler {
 func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
 	ug := server.Group("/users")
 	ug.POST("/signup", h.SignUp)
-	ug.POST("/login", h.Login)
+	ug.POST("/login", h.LoginJwt)
 	ug.GET("/profile", h.Profile)
 	ug.POST("/edit", h.Edit)
 }
@@ -147,6 +149,65 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 	}
 
 }
+
+func (h *UserHandler) LoginJwt(ctx *gin.Context) {
+	type loginReq struct {
+		Email    string
+		Password string
+	}
+
+	var req loginReq
+	if err := ctx.Bind(&req); err != nil {
+		return
+	}
+	// 调用service的业务逻辑
+	u, err := h.svc.Login(ctx, req.Email, req.Password)
+	switch err {
+	case nil:
+		uc := UseClaims{
+			Uid: u.Id,
+			RegisteredClaims: jwt.RegisteredClaims{
+				// 设置过期时间为30分钟
+				ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 30)),
+			},
+		}
+		token := jwt.NewWithClaims(jwt.SigningMethodHS512, uc)
+		// 生成秘钥
+		tokenStr, err := token.SignedString(JWTKey)
+		if err != nil {
+			ctx.JSON(http.StatusOK, gin.H{
+				"code":    http.StatusOK,
+				"message": "系统错误",
+			})
+		}
+		ctx.Header("x-jwt-token", tokenStr)
+		//sess := sessions.Default(ctx)
+		//sess.Set("userId", u.Id)
+		//sess.Options(sessions.Options{
+		//	// 过期时间15分钟
+		//	MaxAge: 900,
+		//})
+		//if errorSess := sess.Save(); errorSess != nil {
+		//	ctx.JSON(http.StatusOK, gin.H{
+		//		"message": "系统错误-session",
+		//	})
+		//	return
+		//}
+		ctx.JSON(http.StatusOK, gin.H{
+			"message": "登录成功!",
+		})
+	case service.ErrInvalidUserOrPassword:
+		ctx.JSON(http.StatusOK, gin.H{
+			"message": "邮箱或者密码不正确",
+		})
+
+	default:
+		ctx.JSON(http.StatusOK, gin.H{
+			"message": "系统错误",
+		})
+	}
+
+}
 func (h *UserHandler) Profile(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "Profile",
@@ -156,4 +217,11 @@ func (h *UserHandler) Edit(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "Edit",
 	})
+}
+
+var JWTKey = []byte("72wNs6ENZnUsmXUC37ro")
+
+type UseClaims struct {
+	Uid int64
+	jwt.RegisteredClaims
 }

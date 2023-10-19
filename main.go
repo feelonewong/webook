@@ -48,12 +48,19 @@ func initWebServer() *gin.Engine {
 	// resolve cors
 	server.Use(cors.New(cors.Config{
 		AllowCredentials: true,
-		AllowHeaders:     []string{"Content-Type"},
+		AllowHeaders:     []string{"Content-Type", "Authorization"},
+		// 允许前端添加的请求头
+		ExposeHeaders: []string{"x-jwt-token"},
 		AllowOriginFunc: func(origin string) bool {
 			return true
 		},
 		MaxAge: 12 * time.Hour,
 	}))
+	useJWT(server)
+	return server
+}
+
+func useSession(server *gin.Engine) {
 	login := &middleware.LoginMiddlewareBuilder{}
 	store, err := redis.NewStore(16, "tcp", "localhost:6379", "",
 		[]byte("yLbakqA10vl62ADPax5ScvE69B0Ph43W"),
@@ -66,7 +73,11 @@ func initWebServer() *gin.Engine {
 		panic(err)
 	}
 	server.Use(sessions.Sessions("ssid", store), login.CheckLogin())
-	return server
+}
+
+func useJWT(server *gin.Engine) {
+	login := &middleware.LoginJWTMiddlewareBuilder{}
+	server.Use(login.CheckLoginJwt())
 }
 
 func redisSaveCookie(server *gin.Engine) {
