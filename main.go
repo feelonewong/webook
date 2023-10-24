@@ -56,6 +56,9 @@ func initWebServer() *gin.Engine {
 		},
 		MaxAge: 12 * time.Hour,
 	}))
+
+	// 限流阈值
+
 	useJWT(server)
 	return server
 }
