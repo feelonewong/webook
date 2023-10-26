@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm"
 	"time"
 	"webook/internal/repository"
+	"webook/internal/repository/cache"
 	"webook/internal/repository/dao"
 	"webook/internal/service"
 	"webook/internal/web"
@@ -90,7 +91,8 @@ func redisSaveCookie(server *gin.Engine) {
 
 func initUser(db *gorm.DB, server *gin.Engine) {
 	ud := dao.NewUserDAO(db)
-	ur := repository.NewUserRepository(ud)
+	c := cache.UserCache{}
+	ur := repository.NewUserRepository(ud, &c)
 	us := service.NewUserService(ur)
 	hdl := web.NewUserHandler(us)
 	hdl.RegisterRoutes(server)

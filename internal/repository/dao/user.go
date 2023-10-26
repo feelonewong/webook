@@ -53,3 +53,12 @@ func (dao *UserDao) FindByEmail(ctx context.Context, email string) (User, error)
 	}
 	return u, nil
 }
+
+func (dao *UserDao) FindById(ctx context.Context, uid int64) (User, error) {
+	var u User
+	err := dao.db.WithContext(ctx).Where("uid=?", uid).First(&u).Error
+	if err != nil {
+		return User{}, err
+	}
+	return u, nil
+}
